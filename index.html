@@ -1,730 +1,198 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#171923">
-  <title>Крокодил — текстовая игра</title>
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <style>
-    :root {
-      --bg: #171426;
-      --panel: #241e38;
-      --panel2: #302746;
-      --line: #493d63;
-      --text: #f7f3ff;
-      --muted: #b8aecb;
-      --green: #c7a8ff;
-      --green-dark: #6543a5;
-      --purple: #c9b5ff;
-      --orange: #f2c2ff;
-      --danger: #ff9dbd;
-      --shadow: 0 16px 45px rgba(0,0,0,.22);
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; min-height: 100vh; color: var(--text);
-      background: radial-gradient(circle at 15% 0%, #49336f 0, transparent 34%),
-                  radial-gradient(circle at 95% 15%, #38265b 0, transparent 32%), var(--bg);
-      font: 16px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    button, input { font: inherit; }
-    button { cursor: pointer; }
-    .shell { width: min(1100px, 100%); margin: 0 auto; padding: 28px 18px 42px; }
-    .brand { display:flex; align-items:center; justify-content:center; gap:12px; margin: 8px 0 24px; text-align:center; }
-    .brand-icon { width:52px; height:52px; display:grid; place-items:center; border-radius:17px; background:linear-gradient(145deg,#e0caff,#9c72e8); color:#2d174b; font-size:30px; box-shadow:var(--shadow); }
-    h1 { margin:0; font-size:clamp(27px,5vw,40px); line-height:1.05; letter-spacing:-1.4px; }
-    .tagline { color:var(--muted); font-size:13px; letter-spacing:1.5px; margin-top:6px; text-transform:uppercase; }
-    .panel { background:rgba(34,38,51,.94); border:1px solid rgba(255,255,255,.08); border-radius:22px; box-shadow:var(--shadow); }
-    .setup { max-width:560px; margin:0 auto; padding:26px; }
-    .eyebrow { color:var(--green); font-size:12px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; margin-bottom:8px; }
-    h2 { font-size:22px; margin:0 0 8px; }
-    .sub { color:var(--muted); margin:0 0 22px; font-size:14px; }
-    label { display:block; color:#d9deea; font-size:13px; font-weight:700; margin:15px 0 7px; }
-    input {
-      width:100%; min-width:0; color:var(--text); background:#171b26;
-      border:1px solid var(--line); border-radius:12px; padding:13px 14px; outline:none;
-      transition:border .15s, box-shadow .15s;
-    }
-    input:focus { border-color:#83d9a3; box-shadow:0 0 0 3px rgba(131,217,163,.12); }
-    input::placeholder { color:#747d8f; }
-    .btn {
-      border:0; border-radius:12px; padding:12px 16px; font-weight:800;
-      transition:transform .12s, filter .12s; min-height:46px;
-    }
-    .btn:hover { filter:brightness(1.06); transform:translateY(-1px); }
-    .btn:disabled { opacity:.45; cursor:not-allowed; transform:none; }
-    .primary { background:linear-gradient(135deg,#d8c2ff,#a77be9); color:#2d174b; }
-    .secondary { background:#353c4d; color:var(--text); border:1px solid #4a5366; }
-    .quiet { background:transparent; color:#c9d0dd; border:1px solid #4a5366; }
-    .danger { background:#512d39; color:#ffd9dc; border:1px solid #79404c; }
-    .full { width:100%; }
-    .separator { display:flex; align-items:center; gap:12px; color:#798294; font-size:12px; margin:18px 0; }
-    .separator:before,.separator:after { content:""; height:1px; flex:1; background:var(--line); }
-    .join-row { display:grid; grid-template-columns:1fr auto; gap:9px; }
-    .note { color:#8e98aa; font-size:12px; margin:16px 0 0; }
-    .error { color:var(--danger); font-size:13px; min-height:20px; margin-top:10px; }
-    [hidden] { display:none !important; }
-    .room-head { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 20px; margin-bottom:16px; }
-    .room-title { display:flex; align-items:center; gap:12px; min-width:0; }
-    .room-title h2 { margin:0; font-size:19px; }
-    .room-code { font-size:12px; color:var(--muted); margin-top:2px; }
-    .room-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-    .small-btn { min-height:38px; padding:8px 12px; font-size:13px; }
-    .layout { display:grid; grid-template-columns:minmax(0,1fr) 270px; gap:16px; align-items:start; }
-    .main-panel { overflow:hidden; }
-    .game-status { padding:18px 20px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:12px; }
-    .status-left { min-width:0; }
-    .status-label { color:var(--muted); font-size:12px; }
-    .leader-name { font-size:18px; font-weight:800; margin-top:2px; }
-    .round-pill { white-space:nowrap; color:#e2d5ff; background:#40315d; border:1px solid #70569d; border-radius:99px; padding:6px 10px; font-size:12px; font-weight:800; }
-    .word-area { padding:16px 20px; background:linear-gradient(120deg,rgba(150,112,220,.18),rgba(104,75,160,.16)); border-bottom:1px solid var(--line); }
-    .word-card { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-    .word-label { color:var(--muted); font-size:12px; }
-    .secret-word { font-size:21px; font-weight:900; letter-spacing:.4px; margin-top:3px; }
-    .word-hidden { color:#8f98a9; font-weight:600; font-size:15px; }
-    .word-controls { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-    .word-controls .btn { min-height:39px; padding:8px 12px; font-size:12px; }
-    .chat-head { padding:13px 20px; display:flex; align-items:center; justify-content:space-between; color:#dce1eb; font-weight:800; font-size:14px; }
-    .online-count { color:var(--muted); font-size:12px; font-weight:500; }
-    .messages { height:390px; overflow:auto; padding:0 18px 16px; display:flex; flex-direction:column; gap:9px; scroll-behavior:smooth; }
-    .message { max-width:88%; align-self:flex-start; background:#303746; border:1px solid rgba(255,255,255,.035); border-radius:5px 15px 15px 15px; padding:9px 12px; overflow-wrap:anywhere; }
-    .message.mine { align-self:flex-end; background:#513a78; border-radius:15px 5px 15px 15px; }
-    .message.system { align-self:center; max-width:96%; text-align:center; background:#39334d; border-color:#50456d; border-radius:12px; color:#e2d9ff; font-size:13px; }
-    .message-name { font-size:11px; font-weight:800; color:var(--orange); margin-bottom:2px; }
-    .message.mine .message-name { color:#e0caff; }
-    .message-text { white-space:pre-wrap; }
-    .message-time { font-size:10px; color:#aab3c1; margin-left:8px; white-space:nowrap; }
-    .chat-form { padding:12px; border-top:1px solid var(--line); display:grid; grid-template-columns:1fr auto; gap:9px; background:rgba(20,24,34,.42); }
-    .chat-form input { background:#171b26; }
-    .sidebar { padding:17px; }
-    .side-title { display:flex; justify-content:space-between; align-items:center; font-weight:800; margin-bottom:12px; }
-    .players { display:flex; flex-direction:column; gap:8px; }
-    .player { display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:12px; background:#2b3140; }
-    .avatar { width:31px; height:31px; flex:0 0 31px; border-radius:10px; display:grid; place-items:center; background:#59417f; font-size:16px; }
-    .player-info { min-width:0; flex:1; }
-    .player-name { font-size:13px; font-weight:750; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .player-role { color:var(--muted); font-size:10px; }
-    .score { font-weight:900; color:var(--green); font-variant-numeric:tabular-nums; }
-    .side-divider { height:1px; background:var(--line); margin:16px 0; }
-    .rules { color:var(--muted); font-size:12px; line-height:1.55; padding-left:17px; margin:0; }
-    .rules li { margin:5px 0; }
-    .host-controls { margin-top:15px; display:grid; gap:8px; }
-    .toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:5; background:#f2f6f3; color:#183629; border-radius:99px; padding:10px 16px; box-shadow:var(--shadow); font-size:13px; font-weight:800; opacity:0; pointer-events:none; transition:opacity .2s; max-width:90%; text-align:center; }
-    .toast.show { opacity:1; }
-    .settings-input {
-      width:100%; color:var(--text); background:#171426; border:1px solid var(--line);
-      border-radius:12px; padding:12px; outline:none; min-height:46px;
-    }
-    .settings-input:focus { border-color:#b99af0; box-shadow:0 0 0 3px rgba(185,154,240,.13); }
-    .footer { color:#8e84a5; font-size:11px; text-align:center; margin-top:20px; }
-    @media (max-width:760px) {
-      .shell { padding:18px 12px 30px; }
-      .brand { margin:4px 0 18px; }
-      .setup { padding:21px 18px; }
-      .layout { grid-template-columns:1fr; }
-      .settings-grid { grid-template-columns:1fr !important; }
-      .sidebar { order:-1; }
-      .players { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
-      .messages { height:48vh; min-height:280px; max-height:460px; }
-      .room-head { align-items:flex-start; flex-direction:column; }
-      .room-actions { justify-content:flex-start; width:100%; }
-      .room-actions .btn { flex:1; }
-      .game-status { padding:15px; }
-      .word-area { padding:14px 15px; }
-      .chat-head { padding:12px 15px; }
-      .word-card { align-items:flex-start; flex-direction:column; }
-      .word-controls { justify-content:flex-start; }
-    }
-    @media (max-width:390px) {
-      .players { grid-template-columns:1fr; }
-      .join-row { grid-template-columns:1fr; }
-      .join-row .btn { width:100%; }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Крокодил — игра для команды</title>
+<style>
+:root{--bg:#100d20;--panel:#1d1733;--panel2:#282044;--line:#443568;--text:#f7f2ff;--muted:#b9afd0;--purple:#a78bfa;--pink:#ec8bd5;--green:#75dfb2;--red:#ff8e9e}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#30204e 0,#100d20 58%);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+main{max-width:1050px;margin:auto;padding:28px 16px 60px}.brand{text-align:center;margin:10px 0 25px}.brand h1{font-size:clamp(32px,6vw,48px);margin:0;color:#e6d9ff}.brand p{color:var(--muted);margin:5px 0}
+.panel{background:rgba(29,23,51,.94);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:0 16px 45px #0003;margin:14px 0}
+h2,h3{margin:0 0 14px}label{display:block;color:var(--muted);font-size:14px;margin:12px 0 6px}
+input,select,textarea,button{font:inherit}input,select,textarea{width:100%;padding:12px 13px;border-radius:12px;border:1px solid var(--line);background:#120e22;color:var(--text);outline:none}input:focus,select:focus,textarea:focus{border-color:var(--purple)}
+button{border:0;border-radius:12px;padding:12px 16px;background:linear-gradient(135deg,#a78bfa,#d58bdc);color:#1b1230;font-weight:750;cursor:pointer}button.secondary{background:#393052;color:var(--text);border:1px solid #574878}button.danger{background:#522d46;color:#ffe1eb}button:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1}.muted{color:var(--muted)}.hidden{display:none!important}.pill{display:inline-block;padding:5px 10px;border-radius:99px;background:#35284e;color:#dfd1ff;font-size:13px}.layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:14px}.chatlog{height:310px;overflow:auto;background:#120e22;border:1px solid var(--line);border-radius:14px;padding:12px}.msg{margin:0 0 10px;overflow-wrap:anywhere}.msg strong{color:#d9c7ff}.system{color:var(--green);font-size:14px}.players{display:grid;gap:8px}.player{display:flex;justify-content:space-between;gap:8px;background:#292142;padding:10px 12px;border-radius:11px}.player small{color:var(--muted)}.word{font-size:clamp(28px,6vw,42px);font-weight:850;letter-spacing:.02em;color:#e6d9ff;text-align:center;margin:10px 0}.notice{padding:12px;border-radius:12px;background:#30254a;color:#e9ddff}.toolbar{display:flex;gap:8px;flex-wrap:wrap}.toolbar button{flex:1}.topline{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.chatform{display:flex;gap:8px;margin-top:10px}.chatform input{flex:1}.chatform button{flex:0 0 auto}.tiny{font-size:12px;color:var(--muted)}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.chatlog{height:260px}.panel{padding:16px}main{padding:16px 12px 40px}}
+</style>
 </head>
-<body>
-  <main class="shell">
-    <header class="brand">
-      <div class="brand-icon">🐊</div>
-      <div>
-        <h1>Крокодил</h1>
-        <div class="tagline">объясняй словами · угадывай первым</div>
-      </div>
-    </header>
+<body><main>
+<header class="brand"><h1>🐊 Крокодил</h1><p>Текстовая игра для вашей команды</p></header>
 
-    <section id="setupView" class="panel setup">
-      <div class="eyebrow">Текстовая игра для компании</div>
-      <h2>Собираем друзей?</h2>
-      <p class="sub">Создай комнату или присоединяйся к уже открытой. Никаких рисунков и микрофонов — только чат 💚</p>
-      <label for="nameInput">Твоё имя</label>
-      <input id="nameInput" maxlength="22" placeholder="Например, Аня" autocomplete="nickname">
-      <button id="createBtn" class="btn primary full" style="margin-top:13px">🐊 Создать комнату</button>
-      <div class="separator">или войти в комнату</div>
-      <div class="join-row">
-        <input id="roomInput" maxlength="40" placeholder="Код комнаты" autocomplete="off">
-        <button id="joinBtn" class="btn secondary">Войти</button>
-      </div>
-      <div id="setupError" class="error" role="status"></div>
-      <p class="note">Для игры нужно минимум два человека. Создатель комнаты должен оставаться в игре до её окончания.</p>
-    </section>
+<section id="setup" class="panel">
+  <h2>Начнём игру</h2>
+  <div class="row">
+    <div><label for="playerName">Твоё имя</label><input id="playerName" maxlength="24" placeholder="Например, Аня"></div>
+    <div><label for="roomCode">Код комнаты</label><input id="roomCode" maxlength="20" placeholder="Введи код, чтобы присоединиться"></div>
+  </div>
+  <div class="row" style="margin-top:14px"><button id="createBtn">Создать комнату</button><button id="joinBtn" class="secondary">Войти в комнату</button></div>
+  <p class="tiny">Создатель комнаты становится ведущим. Он должен оставаться в игре, пока команда играет.</p>
+  <p id="setupError" class="muted"></p>
+</section>
 
-    <section id="roomView" hidden>
-      <div class="panel room-head">
-        <div class="room-title">
-          <div class="brand-icon" style="width:42px;height:42px;border-radius:13px;font-size:23px">🐊</div>
-          <div>
-            <h2>Игровая комната</h2>
-            <div class="room-code">Код: <strong id="roomCodeText">—</strong> · <span id="connectionText">подключаемся…</span></div>
-          </div>
-        </div>
-        <div class="room-actions">
-          <button id="settingsBtn" class="btn secondary small-btn" hidden>⚙ Настройки</button>
-          <button id="copyInviteBtn" class="btn secondary small-btn">🔗 Пригласить</button>
-          <button id="leaveBtn" class="btn quiet small-btn">Выйти</button>
-        </div>
-      </div>
+<section id="game" class="hidden">
+ <div class="panel topline">
+  <div><span class="pill" id="roomBadge"></span> <span class="muted" id="roleLabel"></span></div>
+  <div class="toolbar"><button id="copyInvite" class="secondary">Скопировать приглашение</button><button id="leaveBtn" class="danger">Выйти</button></div>
+ </div>
+ <div class="layout">
+  <div>
+   <section class="panel">
+    <div class="topline"><h2>Раунд</h2><span class="pill" id="roundBadge">Ожидание</span></div>
+    <div id="roundInfo" class="notice">Ведущий может начать игру.</div>
+    <div id="secretArea" class="hidden"><p class="muted" style="text-align:center">Твоё секретное слово</p><div class="word" id="secretWord"></div></div>
+    <div id="notLeader" class="muted">Когда раунд начнётся, ведущий будет объяснять слово в голосовом или видеозвонке, а остальные — угадывать здесь.</div>
+    <div id="hostControls" class="toolbar hidden" style="margin-top:16px"><button id="startBtn">Начать раунд</button><button id="revealBtn" class="secondary">Показать слово</button><button id="skipBtn" class="secondary">Пропустить</button></div>
+   </section>
+   <section class="panel">
+    <h2>Общий чат</h2><div id="chatlog" class="chatlog" aria-live="polite"></div>
+    <form id="chatForm" class="chatform"><input id="chatInput" maxlength="180" placeholder="Напиши ответ или сообщение…" autocomplete="off"><button>Отправить</button></form>
+   </section>
+   <section id="settingsPanel" class="panel hidden">
+    <h3>Настройки ведущего</h3>
+    <div class="row"><div><label>Категория</label><select id="category"><option>Все категории</option><option>Животные</option><option>Еда</option><option>Предметы</option><option>Профессии</option><option>Фильмы и персонажи</option><option>Действия</option></select></div>
+    <div><label>Сложность</label><select id="difficulty"><option>Любая</option><option>Лёгкая</option><option>Средняя</option><option>Сложная</option></select></div></div>
+    <label>Таймер (секунд; 0 — без таймера)</label><input id="timerSeconds" type="number" min="0" max="600" value="0">
+    <label>Свои слова (по одному в строке, необязательно)</label><textarea id="customWords" rows="3" placeholder="Например: квартальный отчёт&#10;кофемашина"></textarea>
+    <button id="saveSettings" class="secondary" style="margin-top:10px">Сохранить настройки</button>
+   </section>
+  </div>
+  <aside class="panel"><h2>Игроки</h2><div id="players" class="players"></div><p class="tiny">Очки начисляются за первый правильный ответ в раунде.</p></aside>
+ </div>
+</section>
+</main>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+import { getDatabase, ref, get, set, update, push, onValue, onChildAdded, onDisconnect, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
-      <section id="settingsPanel" class="panel settings-panel" hidden style="padding:20px;margin-bottom:16px">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-          <div>
-            <div class="eyebrow">Настройки комнаты</div>
-            <h2 style="margin:0">Настраиваем игру 💜</h2>
-          </div>
-          <button id="closeSettingsBtn" class="btn quiet small-btn">Закрыть ✕</button>
-        </div>
-        <div class="settings-grid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px">
-          <div>
-            <label for="categorySelect">Категории</label>
-            <select id="categorySelect" class="settings-input">
-              <option value="Все категории">Все категории</option>
-              <option value="Смешанные">Смешанные</option>
-              <option value="Животные">Животные</option>
-              <option value="Еда">Еда</option>
-              <option value="Предметы">Предметы</option>
-              <option value="Профессии">Профессии</option>
-              <option value="Места и события">Места и события</option>
-              <option value="Мои слова">Только мои слова</option>
-            </select>
-          </div>
-          <div>
-            <label for="difficultySelect">Сложность</label>
-            <select id="difficultySelect" class="settings-input">
-              <option value="Любая">Любая</option>
-              <option value="Лёгкая">Лёгкая</option>
-              <option value="Средняя">Средняя</option>
-              <option value="Сложная">Сложная</option>
-            </select>
-          </div>
-          <div>
-            <label for="timerSelect">Время на слово</label>
-            <select id="timerSelect" class="settings-input">
-              <option value="0">Без таймера</option>
-              <option value="60">1 минута</option>
-              <option value="90">1 минута 30 секунд</option>
-              <option value="120">2 минуты</option>
-              <option value="180">3 минуты</option>
-            </select>
-          </div>
-        </div>
-        <label for="customWordsInput" style="margin-top:18px">💜 Мои слова и локальные мемы</label>
-        <textarea id="customWordsInput" rows="5" maxlength="6000" placeholder="краш&#10;скуф&#10;имба&#10;тот самый созвон&#10;ваша внутренняя шутка" style="width:100%;resize:vertical;color:var(--text);background:#171426;border:1px solid var(--line);border-radius:12px;padding:13px 14px;outline:none;font:inherit"></textarea>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:8px">
-          <span id="customWordsCount" class="note" style="margin:0">Можно добавить до 200 слов или фраз. Разделяй их строками или запятыми.</span>
-          <button id="saveSettingsBtn" class="btn primary">Сохранить настройки</button>
-        </div>
-        <p class="note">Настройки комнаты меняет её создатель. Свои слова сохраняются в браузере создателя и передаются участникам вместе с настройками раунда.</p>
-      </section>
-
-      <div class="layout">
-        <section class="panel main-panel">
-          <div class="game-status">
-            <div class="status-left">
-              <div class="status-label">СЕЙЧАС ОБЪЯСНЯЕТ</div>
-              <div class="leader-name" id="leaderName">Ожидаем игроков…</div>
-            </div>
-            <div class="round-pill" id="roundPill">ЛОББИ</div>
-          </div>
-          <div class="word-area">
-            <div class="word-card">
-              <div>
-                <div class="word-label" id="wordLabel">Секретное слово увидит ведущий</div>
-                <div class="secret-word word-hidden" id="secretWord">🤫 Пока ждём начала игры</div>
-              </div>
-              <div class="word-controls">
-                <button id="revealBtn" class="btn secondary" hidden>👀 Показать слово</button>
-                <button id="newWordBtn" class="btn quiet" hidden>⏭ Новое слово</button>
-              </div>
-            </div>
-          </div>
-          <div class="chat-head">
-            <span>💬 Общий чат</span>
-            <span class="online-count" id="onlineCount">0 игроков</span>
-          </div>
-          <div id="messages" class="messages" aria-live="polite"></div>
-          <form id="chatForm" class="chat-form">
-            <input id="chatInput" maxlength="300" placeholder="Напиши подсказку или свой вариант…" autocomplete="off" disabled>
-            <button id="sendBtn" class="btn primary" type="submit" disabled>Отправить</button>
-          </form>
-        </section>
-
-        <aside class="panel sidebar">
-          <div class="side-title"><span>🏆 Игроки</span><span class="online-count" id="playerCount">0</span></div>
-          <div id="playersList" class="players"></div>
-          <div class="side-divider"></div>
-          <div class="side-title">Как играть?</div>
-          <ol class="rules">
-            <li>Ведущий видит секретное слово.</li>
-            <li>Он объясняет его сообщениями в чате.</li>
-            <li>Остальные пишут свои догадки.</li>
-            <li>Первый правильный ответ получает 1 балл и становится ведущим.</li>
-          </ol>
-          <div id="hostControls" class="host-controls" hidden>
-            <button id="startBtn" class="btn primary full">🚀 Начать игру</button>
-            <button id="endBtn" class="btn danger full" hidden>Завершить игру</button>
-          </div>
-          <p id="waitingHint" class="note">Ждём, пока создатель комнаты начнёт игру.</p>
-        </aside>
-      </div>
-      <div class="footer">Сделано для весёлых вечеров 💚 · Комнаты работают, пока онлайн их создатель</div>
-    </section>
-  </main>
-  <div id="toast" class="toast"></div>
-
-<script>
-(() => {
-  const WORDS = {
-    "Смешанные": ["лифт","чемодан","радуга","будильник","пылесос","палатка","светофор","карусель","пират","дирижёр","лабиринт","телескоп","снеговик","парашют","аквариум","скейтборд","подушка","компас","фейерверк","зонт","робот","корона","пингвин","библиотека","вулкан","самокат","микрофон","космонавт","пианино","попкорн","матрёшка","фотограф","глобус","качели","замок","фонтан","детектив","волшебник","будка","паутина","шахматы","мороженое","пароход","дракон","сокровище","маскарад","коньки","рюкзак","сирена","перископ"],
-    "Животные": ["енот","жираф","белка","осьминог","хамелеон","кенгуру","бегемот","ёжик","фламинго","дельфин","крокодил","панда","верблюд","попугай","черепаха","летучая мышь","морская звезда","страус","бобр","лиса","тигр","улитка","акула","коала","павлин"],
-    "Еда": ["пельмени","арбуз","сырники","шаурма","пицца","блины","ананас","зефир","суши","борщ","пончики","кукуруза","мармелад","оливье","ватрушка","лимонад","хот-дог","круассан","варенье","гранат","пирог","картошка фри","чизкейк","какао","хлопья"],
-    "Предметы": ["наушники","скрепка","зубная щётка","фен","термос","прищепка","клавиатура","пульт","штопор","гирлянда","расчёска","фонарик","конверт","будильник","сковородка","губка","степлер","валенок","веер","рулетка","бинокль","свисток","мыльница","поднос","копилка"],
-    "Профессии": ["пожарный","археолог","кондитер","режиссёр","ветеринар","полицейский","клоун","архитектор","космонавт","парикмахер","следователь","переводчик","пилот","фокусник","библиотекарь","дрессировщик","дизайнер","капитан","садовник","фотограф","учитель","повар","ювелир","экскурсовод","часовщик"],
-    "Места и события": ["аэропорт","зоопарк","вокзал","карнавал","свадьба","цирк","метро","пляж","музей","ярмарка","космодром","больница","горнолыжный курорт","пикник","аквапарк","библиотека","киностудия","остров","пустыня","водопад","парк аттракционов","ночной клуб","рынок","планетарий","теплица"]
-  };
-  const $ = id => document.getElementById(id);
-  const setupView = $("setupView"), roomView = $("roomView");
-  let peer = null, hostConnection = null, isHost = false, myId = null, myName = "";
-  let roomCode = "", players = [], game = { started:false, leaderId:null, round:0, deadline:null };
-  let settings = { category:"Все категории", difficulty:"Любая", timerSeconds:0, customWords:[] };
-  let roundTimer = null, tickTimer = null;
-  let privateWord = "", wordVisible = false, chatHistory = [], connections = {};
-  let toastTimer = null;
-
-  function showToast(message) {
-    const el = $("toast"); el.textContent = message; el.classList.add("show");
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+const firebaseConfig = {
+  apiKey: "AIzaSyA5sosIhI3COpIBZHwSXbmwuYBBcS3MKY",
+  authDomain: "krokodil-game.firebaseapp.com",
+  databaseURL: "https://krokodil-game-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "krokodil-game",
+  storageBucket: "krokodil-game.firebasestorage.app",
+  messagingSenderId: "260047457083",
+  appId: "1:260047457083:web:1ff65e020378cd0ce5c51e",
+  measurementId: "G-XVWH2D2WJ3"
+};
+const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getDatabase(app);
+const $=id=>document.getElementById(id);
+const words={
+ "Животные":{easy:["кот","собака","слон","пингвин"],medium:["хамелеон","дикобраз","фламинго"],hard:["утконос","аксолотль"]},
+ "Еда":{easy:["пицца","банан","мороженое"],medium:["рататуй","пахлава","гуакамоле"],hard:["крокембуш","карпаччо"]},
+ "Предметы":{easy:["зонт","чашка","чемодан"],medium:["телескоп","степлер","компас"],hard:["калейдоскоп","метроном"]},
+ "Профессии":{easy:["врач","повар","пилот"],medium:["археолог","сурдопереводчик"],hard:["реставратор","энтомолог"]},
+ "Фильмы и персонажи":{easy:["Шрек","Гарри Поттер"],medium:["Человек-паук","Джек Воробей"],hard:["Амели","Доктор Стрэндж"]},
+ "Действия":{easy:["танцевать","плавать"],medium:["жонглировать","дирижировать"],hard:["импровизировать","телепортироваться"]}
+};
+let user=null, room=null, isHost=false, roomData=null, secret="", revealed=false, shownMessages=new Set(), hostListenerStart=0, roundTimer=null, unsubRoom=null, unsubSecret=null, unsubMessages=null, processing=false;
+const clean=s=>(s||"").toString().trim().toLocaleLowerCase("ru").replace(/[ё]/g,"е").replace(/[^\p{L}\p{N}]+/gu,"");
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function code(){return "croco-"+Array.from(crypto.getRandomValues(new Uint8Array(6)),x=>"abcdefghjkmnpqrstuvwxyz23456789"[x%32]).join("")}
+function showError(msg){$("setupError").textContent=msg}
+function roomRef(path=""){return ref(db,`rooms/${room}${path?"/"+path:""}`)}
+function saySystem(t){const d=document.createElement("div");d.className="msg system";d.textContent=t;$("chatlog").append(d);$("chatlog").scrollTop=$("chatlog").scrollHeight}
+function addMessage(m){if(!m||!m.id||shownMessages.has(m.id))return;shownMessages.add(m.id);const d=document.createElement("div");d.className="msg";d.innerHTML=`<strong>${esc(m.name||"Игрок")}:</strong> ${esc(m.text||"")}`;$("chatlog").append(d);$("chatlog").scrollTop=$("chatlog").scrollHeight}
+async function init(){try{const cred=await signInAnonymously(auth);user=cred.user;const params=new URLSearchParams(location.search);if(params.has("room"))$("roomCode").value=params.get("room")}catch(e){showError("Не удалось подключиться к Firebase: "+e.message)}}
+function render(){
+ if(!roomData)return;
+ const players=roomData.players||{}, state=roomData.state||{}, me=players[user.uid];
+ $("players").innerHTML=Object.entries(players).sort((a,b)=>(b[1].score||0)-(a[1].score||0)).map(([uid,p])=>`<div class="player"><span>${esc(p.name)} ${uid===state.leaderId?"👑":""} ${uid===user.uid?"(ты)":""}</span><b>${p.score||0}</b></div>`).join("");
+ $("roleLabel").textContent=isHost?"Ты — ведущий комнаты":"Игрок";
+ $("roundBadge").textContent=state.started?`Раунд ${state.round||1}`:"Ожидание";
+ $("roundInfo").textContent=state.winnerName?`${state.winnerName} угадал(а)! Следующий раунд скоро начнётся.`:state.started?`Ведущий: ${(players[state.leaderId]||{}).name||"—"}. Угадывайте слово в чате!`:"Ожидаем начала игры.";
+ const leader=state.leaderId===user.uid;
+ $("secretArea").classList.toggle("hidden",!(leader&&secret&&!revealed));
+ $("notLeader").classList.toggle("hidden",leader&&secret&&!revealed);
+ $("secretWord").textContent=secret;
+ $("hostControls").classList.toggle("hidden",!isHost);
+ $("settingsPanel").classList.toggle("hidden",!isHost);
+ $("startBtn").disabled=!isHost||!Object.keys(players).length;
+ $("revealBtn").disabled=!secret||revealed;
+ $("skipBtn").disabled=!state.started;
+}
+async function createRoom(){
+ const name=$("playerName").value.trim()||"Игрок", id=code();room=id;isHost=true;
+ const data={hostId:user.uid,createdAt:Date.now(),players:{[user.uid]:{name,score:0,joinedAt:Date.now()}},state:{started:false,leaderId:user.uid,round:0,winnerId:null},settings:{category:"Все категории",difficulty:"Любая",timerSeconds:0,customWords:[]}};
+ try{await set(ref(db,`rooms/${room}`),data);await enterRoom();}catch(e){room=null;isHost=false;showError("Не удалось создать комнату: "+e.message)}
+}
+async function joinRoom(){
+ const name=$("playerName").value.trim()||"Игрок", id=$("roomCode").value.trim().toLowerCase();
+ if(!id){showError("Введи код комнаты.");return}
+ room=id;isHost=false;
+ try{const snap=await get(ref(db,`rooms/${room}`));if(!snap.exists()){room=null;showError("Комната не найдена. Проверь код.");return}
+ await set(ref(db,`rooms/${room}/players/${user.uid}`),{name,score:0,joinedAt:Date.now()});
+ await enterRoom();
+ }catch(e){room=null;showError("Не удалось войти: "+e.message)}
+}
+async function enterRoom(){
+ $("setup").classList.add("hidden");$("game").classList.remove("hidden");$("roomBadge").textContent=room;
+ const invite=`${location.origin}${location.pathname}?room=${encodeURIComponent(room)}`;
+ $("copyInvite").onclick=async()=>{try{await navigator.clipboard.writeText(invite);saySystem("Ссылка-приглашение скопирована!")}catch{prompt("Скопируй ссылку:",invite)}};
+ await onDisconnect(ref(db,`rooms/${room}/players/${user.uid}`)).remove();
+ if(isHost)await onDisconnect(ref(db,`rooms/${room}/state/hostOnline`)).set(false);
+ unsubRoom=onValue(roomRef(),snap=>{if(!snap.exists()){saySystem("Комната закрыта.");return}roomData=snap.val();render();});
+ unsubSecret=onValue(ref(db,`secrets/${room}`),snap=>{secret=snap.val()?.word||"";revealed=false;render();});
+ unsubMessages=onChildAdded(ref(db,`rooms/${room}/messages`),snap=>{const m=snap.val();if(!m)return;m.id=snap.key;addMessage(m);if(isHost&&m.uid!==user.uid&&m.createdAt>=hostListenerStart)processGuess(m);});
+ if(isHost){hostListenerStart=Date.now();await update(roomRef("state"),{hostOnline:true});}
+}
+async function sendChat(text){
+ text=text.trim();if(!text||!room)return;
+ await push(roomRef("messages"),{uid:user.uid,name:roomData?.players?.[user.uid]?.name||"Игрок",text,createdAt:Date.now()});
+ $("chatInput").value="";
+}
+async function processGuess(m){
+ if(processing||!isHost||!roomData)return;
+ const st=roomData.state||{}, player=roomData.players?.[st.leaderId];
+ if(!st.started||st.winnerId||m.uid===st.leaderId||!secret)return;
+ if(clean(m.text)!==clean(secret))return;
+ processing=true;
+ try{
+  const winnerRef=roomRef("state/winnerId");
+  const tx=await runTransaction(winnerRef,current=>current===null?m.uid:undefined);
+  if(tx.committed){
+   const winner=roomData.players?.[m.uid];const score=(winner?.score||0)+1;
+   await update(roomRef(`players/${m.uid}`),{score});
+   await update(roomRef("state"),{winnerId:m.uid,winnerName:winner?.name||m.name,started:false});
+   saySystem(`${winner?.name||m.name} первым(ой) угадал(а) слово и получает 1 балл!`);
+   setTimeout(()=>{if(isHost&&roomData?.state?.winnerId===m.uid)startRound(m.uid)},2800);
   }
-  function setError(message) { $("setupError").textContent = message || ""; }
-  function safeName(value) { return (value || "").trim().replace(/[<>]/g,"").slice(0,22) || "Игрок"; }
-  function randomRoomCode() {
-    const chars = "abcdefghjkmnpqrstuvwxyz23456789";
-    let out = "croco-";
-    for (let i=0;i<6;i++) out += chars[Math.floor(Math.random()*chars.length)];
-    return out;
-  }
-  function makePeer(id) {
-    if (!window.Peer) throw new Error("Не загрузилась библиотека подключения. Обнови страницу.");
-    return new Peer(id || undefined, { host:"0.peerjs.com", port:443, path:"/", secure:true, debug:0 });
-  }
-  function showRoom() {
-    setupView.hidden = true; roomView.hidden = false;
-    $("roomCodeText").textContent = roomCode;
-    $("hostControls").hidden = !isHost;
-    $("settingsBtn").hidden = !isHost;
-    $("waitingHint").hidden = isHost;
-    $("chatInput").disabled = false; $("sendBtn").disabled = false;
-    render();
-  }
-  function publicState() {
-    return { started:game.started, leaderId:game.leaderId, round:game.round, deadline:game.deadline || null };
-  }
-  function localPlayer() { return players.find(p => p.id === myId); }
-  function playerName(id) { return (players.find(p => p.id === id) || {}).name || "Игрок"; }
-  function addMessage(name, text, type="normal", senderId=null, time=Date.now()) {
-    const item = { name, text, type, senderId, time };
-    chatHistory.push(item); if (chatHistory.length > 100) chatHistory.shift();
-    appendMessage(item);
-  }
-  function appendMessage(item) {
-    const box = document.createElement("div");
-    box.className = "message" + (item.type === "system" ? " system" : (item.senderId === myId ? " mine" : ""));
-    if (item.type !== "system") {
-      const name = document.createElement("div"); name.className = "message-name"; name.textContent = item.name;
-      box.appendChild(name);
-    }
-    const body = document.createElement("span"); body.className = "message-text"; body.textContent = item.text;
-    box.appendChild(body);
-    const time = document.createElement("span"); time.className = "message-time";
-    time.textContent = new Date(item.time || Date.now()).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
-    box.appendChild(time);
-    $("messages").appendChild(box);
-    $("messages").scrollTop = $("messages").scrollHeight;
-  }
-  function renderHistory(items) {
-    $("messages").innerHTML = "";
-    chatHistory = items || [];
-    chatHistory.forEach(appendMessage);
-  }
-  function render() {
-    $("connectionText").textContent = "подключено";
-    $("onlineCount").textContent = `${players.length} ${players.length===1?"игрок":players.length<5?"игрока":"игроков"}`;
-    $("playerCount").textContent = players.length;
-    $("playersList").innerHTML = "";
-    const sorted = [...players].sort((a,b) => b.score-a.score || a.joinedAt-b.joinedAt);
-    sorted.forEach(p => {
-      const row = document.createElement("div"); row.className = "player";
-      const avatar = document.createElement("div"); avatar.className = "avatar"; avatar.textContent = p.id===game.leaderId ? "🐊" : "🙂";
-      const info = document.createElement("div"); info.className = "player-info";
-      const name = document.createElement("div"); name.className = "player-name"; name.textContent = p.name + (p.id===myId ? " (ты)" : "");
-      const role = document.createElement("div"); role.className = "player-role"; role.textContent = p.id===game.leaderId ? "ведущий" : (p.isHost ? "создатель комнаты" : "игрок");
-      info.append(name,role);
-      const score = document.createElement("div"); score.className = "score"; score.textContent = p.score + " ★";
-      row.append(avatar,info,score); $("playersList").appendChild(row);
-    });
-    const leader = players.find(p=>p.id===game.leaderId);
-    $("leaderName").textContent = game.started ? (leader ? leader.name : "неизвестный игрок") : "Ожидаем начала игры…";
-    const remaining = game.deadline ? Math.max(0, Math.ceil((game.deadline-Date.now())/1000)) : null;
-    const clock = remaining === null ? "" : ` · ${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,"0")}`;
-    $("roundPill").textContent = game.started ? `РАУНД ${game.round}${clock}` : "ЛОББИ";
-    const isLeader = game.started && game.leaderId === myId;
-    $("wordLabel").textContent = isLeader ? "ТВОЁ СЕКРЕТНОЕ СЛОВО" : (game.started ? "Слово видит только ведущий" : "Секретное слово увидит ведущий");
-    $("secretWord").textContent = isLeader ? (wordVisible && privateWord ? privateWord : "🤫 Нажми «Показать слово»") : (game.started ? "🤫 Не подглядывай!" : "🤫 Пока ждём начала игры");
-    $("secretWord").classList.toggle("word-hidden", !isLeader || !wordVisible);
-    $("revealBtn").hidden = !isLeader;
-    $("newWordBtn").hidden = !isLeader;
-    $("startBtn").hidden = !isHost || game.started;
-    $("startBtn").disabled = players.length < 2;
-    $("endBtn").hidden = !isHost || !game.started;
-    $("waitingHint").hidden = isHost || game.started;
-    $("chatInput").placeholder = isLeader ? "Объясни слово сообщением…" : "Напиши свою догадку…";
-  }
-  function broadcast(type, payload) {
-    Object.values(connections).forEach(conn => { if (conn && conn.open) conn.send({type, ...payload}); });
-  }
-  function broadcastState() {
-    const packet = { state:publicState(), players, settings };
-    render();
-    broadcast("state", packet);
-  }
-  function sendPrivateWord(playerId) {
-    if (playerId === myId) {
-      privateWord = currentWord; wordVisible = false; render();
-      return;
-    }
-    const conn = connections[playerId];
-    if (conn && conn.open) conn.send({type:"your_word", word:currentWord});
-  }
-  let currentWord = "";
-  let lastWord = "";
-  function wordDifficulty(word) {
-    const length = word.replace(/\\s/g,"").length;
-    if (length <= 7) return "Лёгкая";
-    if (length <= 12) return "Средняя";
-    return "Сложная";
-  }
-  function pickWord() {
-    let all = [];
-    const cats = settings.category === "Все категории" ? Object.keys(WORDS) :
-      (settings.category === "Мои слова" ? [] : [settings.category]);
-    cats.forEach(category => (WORDS[category] || []).forEach(word => all.push({word,category})));
-    (settings.customWords || []).forEach(word => {
-      if (settings.category === "Все категории" || settings.category === "Мои слова")
-        all.push({word,category:"Мои слова"});
-    });
-    if (!all.length) {
-      Object.keys(WORDS).forEach(category => WORDS[category].forEach(word=>all.push({word,category})));
-    }
-    let choices = all.filter(item => item.word !== lastWord);
-    if (settings.difficulty !== "Любая") {
-      const filtered = choices.filter(item => wordDifficulty(item.word) === settings.difficulty);
-      if (filtered.length) choices = filtered;
-    }
-    const selected = choices[Math.floor(Math.random()*choices.length)] || all[0];
-    lastWord = selected.word;
-    return selected;
-  }
-  function startRound(leaderId) {
-    if (roundTimer) clearTimeout(roundTimer);
-    const selected = pickWord();
-    currentWord = selected.word;
-    game.started = true; game.leaderId = leaderId; game.round += 1;
-    game.deadline = settings.timerSeconds ? Date.now() + settings.timerSeconds * 1000 : null;
-    privateWord = ""; wordVisible = false;
-    if (leaderId === myId) { privateWord = currentWord; }
-    broadcast("round", {state:publicState(),settings});
-    broadcastState();
-    sendPrivateWord(leaderId);
-    addSystem(`Раунд ${game.round}: теперь объясняет ${playerName(leaderId)}!${settings.timerSeconds ? ` На слово ${settings.timerSeconds} сек.` : ""}`);
-    if (settings.timerSeconds) {
-      roundTimer = setTimeout(() => {
-        if (!game.started || !game.leaderId) return;
-        addSystem("⏰ Время вышло! Берём следующее слово.");
-        startRound(game.leaderId);
-      }, settings.timerSeconds * 1000);
-    }
-  }
-  function addSystem(text) {
-    const item = {name:"",text,type:"system",senderId:null,time:Date.now()};
-    chatHistory.push(item); if (chatHistory.length>100) chatHistory.shift();
-    appendMessage(item);
-    broadcast("chat_message", {item});
-  }
-  function normalizeAnswer(value) {
-    return (value || "").toLocaleLowerCase("ru-RU").replace(/ё/g,"е").replace(/[«»"'`.,!?;:()[\]{}]/g," ").replace(/\s+/g," ").trim();
-  }
-  function hostHandleChat(senderId, text) {
-    const sender = players.find(p=>p.id===senderId);
-    if (!sender || !text.trim()) return;
-    const item = {name:sender.name,text:text.trim(),type:"normal",senderId,time:Date.now()};
-    chatHistory.push(item); if (chatHistory.length>100) chatHistory.shift();
-    appendMessage(item);
-    broadcast("chat_message", {item});
-    if (game.started && senderId !== game.leaderId && normalizeAnswer(text) === normalizeAnswer(currentWord)) {
-      sender.score += 1;
-      const foundWord = currentWord;
-      const success = {name:"",text:`🎉 ${sender.name} угадал(а) слово «${foundWord}» и получает 1 балл!`,type:"system",senderId:null,time:Date.now()};
-      chatHistory.push(success); appendMessage(success); broadcast("chat_message",{item:success});
-      broadcastState();
-      startRound(senderId);
-    }
-  }
-  function sendChat(text) {
-    if (!text.trim()) return;
-    if (isHost) hostHandleChat(myId,text);
-    else if (hostConnection && hostConnection.open) hostConnection.send({type:"chat",text});
-  }
-  function hostHandleData(conn, data) {
-    if (!data || typeof data !== "object") return;
-    if (data.type === "hello") {
-      const id = conn.peer;
-      const name = safeName(data.name);
-      if (!players.some(p=>p.id===id)) players.push({id,name,score:0,isHost:false,joinedAt:Date.now()});
-      connections[id] = conn;
-      conn.send({type:"welcome",state:publicState(),players,history:chatHistory,settings,privateWord:game.started && game.leaderId===id ? currentWord : ""});
-      broadcastState();
-      addSystem(`${name} присоединился(ась) к игре`);
-    } else if (data.type === "chat") {
-      hostHandleChat(conn.peer, String(data.text||"").slice(0,300));
-    } else if (data.type === "skip" && game.started && conn.peer === game.leaderId) {
-      addSystem(`${playerName(conn.peer)} пропускает слово`);
-      startRound(conn.peer);
-    }
-  }
-  function removePlayer(id) {
-    const removed = players.find(p=>p.id===id);
-    players = players.filter(p=>p.id!==id);
-    delete connections[id];
-    if (removed) addSystem(`${removed.name} покинул(а) комнату`);
-    if (game.started && game.leaderId===id) {
-      const next = players.find(p=>p.id===myId) || players[0];
-      if (next) startRound(next.id);
-      else { game.started=false; game.leaderId=null; currentWord=""; privateWord=""; }
-    }
-    broadcastState();
-  }
-  function connectHostPeer(peerObj) {
-    peerObj.on("connection", conn => {
-      conn.on("data", data => hostHandleData(conn,data));
-      conn.on("close", () => removePlayer(conn.peer));
-      conn.on("error", () => {});
-    });
-  }
-  async function createRoom() {
-    setError("");
-    myName = safeName($("nameInput").value);
-    $("createBtn").disabled = true; $("joinBtn").disabled = true;
-    try {
-      roomCode = randomRoomCode();
-      peer = makePeer(roomCode);
-      peer.on("error", err => {
-        if (err.type === "unavailable-id") {
-          try { peer.destroy(); } catch(e) {}
-          peer = null; $("createBtn").disabled=false; $("joinBtn").disabled=false;
-          createRoom(); return;
-        }
-        setError("Не удалось создать комнату: " + (err.type || "ошибка подключения"));
-        $("createBtn").disabled=false; $("joinBtn").disabled=false;
-      });
-      peer.on("open", id => {
-        myId = id; isHost = true;
-        players = [{id:myId,name:myName,score:0,isHost:true,joinedAt:Date.now()}];
-        try {
-          const saved = JSON.parse(localStorage.getItem("krokodil-settings") || "null");
-          if (saved && typeof saved === "object") settings = {...settings,...saved};
-        } catch(e) {}
-        connectHostPeer(peer);
-        showRoom();
-        addSystem("Комната создана! Отправь друзьям код или ссылку-приглашение 💚");
-      });
-    } catch(err) {
-      setError(err.message || "Не получилось создать комнату.");
-      $("createBtn").disabled=false; $("joinBtn").disabled=false;
-    }
-  }
-  function joinRoom() {
-    setError("");
-    myName = safeName($("nameInput").value);
-    roomCode = $("roomInput").value.trim().toLowerCase();
-    if (!roomCode) { setError("Введи код комнаты."); return; }
-    $("createBtn").disabled = true; $("joinBtn").disabled = true;
-    try {
-      peer = makePeer();
-      peer.on("error", err => {
-        setError("Ошибка подключения: " + (err.type || "проверь код комнаты"));
-        $("createBtn").disabled=false; $("joinBtn").disabled=false;
-      });
-      peer.on("open", id => {
-        myId = id; isHost = false;
-        hostConnection = peer.connect(roomCode,{reliable:true});
-        hostConnection.on("open", () => {
-          hostConnection.send({type:"hello",name:myName});
-          showRoom();
-          $("connectionText").textContent = "подключаемся к комнате…";
-        });
-        hostConnection.on("data", data => clientHandleData(data));
-        hostConnection.on("close", () => {
-          showToast("Связь с комнатой потеряна");
-          $("connectionText").textContent = "нет связи";
-          $("chatInput").disabled=true; $("sendBtn").disabled=true;
-        });
-        hostConnection.on("error", () => setError("Не удалось подключиться к комнате. Проверь код."));
-      });
-    } catch(err) {
-      setError(err.message || "Не получилось подключиться.");
-      $("createBtn").disabled=false; $("joinBtn").disabled=false;
-    }
-  }
-  function clientHandleData(data) {
-    if (!data) return;
-    if (data.type === "welcome") {
-      players = data.players || [];
-      game = data.state || game;
-      settings = data.settings || settings;
-      renderHistory(data.history || []);
-      privateWord = data.privateWord || ""; wordVisible=false;
-      $("connectionText").textContent = "подключено";
-      render();
-    } else if (data.type === "state") {
-      players = data.players || players;
-      game = data.state || game;
-      settings = data.settings || settings;
-      if (game.leaderId !== myId) { privateWord=""; wordVisible=false; }
-      render();
-    } else if (data.type === "settings") {
-      settings = data.settings || settings;
-      render();
-    } else if (data.type === "round") {
-      game = data.state || game;
-      settings = data.settings || settings;
-      if (game.leaderId !== myId) { privateWord=""; wordVisible=false; }
-      render();
-    } else if (data.type === "your_word") {
-      privateWord = data.word || ""; wordVisible=false; render();
-      showToast("Тебе досталось новое слово! 🐊");
-    } else if (data.type === "chat_message") {
-      const item = data.item;
-      if (item) {
-        chatHistory.push(item); if (chatHistory.length>100) chatHistory.shift();
-        appendMessage(item);
-      }
-    } else if (data.type === "room_closed") {
-      showToast("Создатель завершил игру");
-      leaveRoom(false);
-    }
-  }
-  function leaveRoom(sendSignal=true) {
-    if (sendSignal && isHost) {
-      broadcast("room_closed",{});
-      Object.values(connections).forEach(c=>{try{c.close();}catch(e){}});
-    }
-    try { if (hostConnection) hostConnection.close(); } catch(e) {}
-    try { if (peer) peer.destroy(); } catch(e) {}
-    peer=null; hostConnection=null; isHost=false; myId=null; roomCode="";
-    players=[]; game={started:false,leaderId:null,round:0,deadline:null}; privateWord=""; currentWord=""; connections={}; chatHistory=[];
-    if (roundTimer) clearTimeout(roundTimer); if (tickTimer) clearInterval(tickTimer);
-    $("settingsPanel").hidden=true;
-    roomView.hidden=true; setupView.hidden=false;
-    $("messages").innerHTML=""; $("createBtn").disabled=false; $("joinBtn").disabled=false;
-    $("chatInput").disabled=true; $("sendBtn").disabled=true;
-    $("roomInput").value="";
-    setError("");
-  }
-
-  function updateCustomWordsCount() {
-    const words = $("customWordsInput").value.split(/[\\n,;]+/).map(s=>s.trim()).filter(Boolean);
-    $("customWordsCount").textContent = `${words.length} слов и фраз · максимум 200`;
-  }
-  function openSettings() {
-    if (!isHost) return;
-    $("categorySelect").value = settings.category || "Все категории";
-    $("difficultySelect").value = settings.difficulty || "Любая";
-    $("timerSelect").value = String(settings.timerSeconds || 0);
-    $("customWordsInput").value = (settings.customWords || []).join("\\n");
-    updateCustomWordsCount();
-    $("settingsPanel").hidden = false;
-    $("settingsPanel").scrollIntoView({behavior:"smooth",block:"nearest"});
-  }
-  function saveSettings() {
-    if (!isHost) return;
-    const words = $("customWordsInput").value.split(/[\\n,;]+/)
-      .map(s=>s.trim().replace(/[<>]/g,"").slice(0,60))
-      .filter(Boolean);
-    settings = {
-      category:$("categorySelect").value,
-      difficulty:$("difficultySelect").value,
-      timerSeconds:Number($("timerSelect").value) || 0,
-      customWords:[...new Set(words)].slice(0,200)
-    };
-    try { localStorage.setItem("krokodil-settings",JSON.stringify(settings)); } catch(e) {}
-    broadcast("settings",{settings});
-    broadcastState();
-    $("settingsPanel").hidden = true;
-    showToast("Настройки сохранены! 💜");
-  }
-
-  $("settingsBtn").addEventListener("click",openSettings);
-  $("closeSettingsBtn").addEventListener("click",()=>$("settingsPanel").hidden=true);
-  $("customWordsInput").addEventListener("input",updateCustomWordsCount);
-  $("saveSettingsBtn").addEventListener("click",saveSettings);
-
-  $("createBtn").addEventListener("click",createRoom);
-  $("joinBtn").addEventListener("click",joinRoom);
-  $("roomInput").addEventListener("keydown",e=>{if(e.key==="Enter")joinRoom();});
-  $("nameInput").addEventListener("keydown",e=>{if(e.key==="Enter")createRoom();});
-  $("chatForm").addEventListener("submit",e=>{
-    e.preventDefault(); const value=$("chatInput").value.trim();
-    if (!value) return; sendChat(value); $("chatInput").value=""; $("chatInput").focus();
-  });
-  $("revealBtn").addEventListener("click",()=>{wordVisible=!wordVisible;render();});
-  $("newWordBtn").addEventListener("click",()=>{
-    if (!game.started || game.leaderId!==myId) return;
-    if (isHost) { addSystem(`${myName} берёт новое слово`); startRound(myId); }
-    else if (hostConnection && hostConnection.open) hostConnection.send({type:"skip"});
-  });
-  $("startBtn").addEventListener("click",()=>{
-    if (!isHost || players.length<2) return;
-    startRound(myId);
-    addSystem("Игра началась! Объясняем только текстом 😉");
-  });
-  $("endBtn").addEventListener("click",()=>{
-    if (!isHost) return;
-    addSystem("Игра завершена! Спасибо за игру 💚");
-    game.started=false; game.leaderId=null; game.deadline=null; currentWord=""; privateWord=""; wordVisible=false;
-    if (roundTimer) clearTimeout(roundTimer);
-    broadcastState();
-  });
-  $("copyInviteBtn").addEventListener("click",async()=>{
-    const url = location.origin + location.pathname + "?room=" + encodeURIComponent(roomCode);
-    try { await navigator.clipboard.writeText(url); showToast("Ссылка-приглашение скопирована!"); }
-    catch(e) { prompt("Скопируй ссылку-приглашение:",url); }
-  });
-  $("leaveBtn").addEventListener("click",()=>leaveRoom(true));
-  window.addEventListener("beforeunload",()=>{try{if(peer)peer.destroy();}catch(e){}});
-  tickTimer = setInterval(() => { if (!roomView.hidden && game.started && game.deadline) render(); }, 1000);
-  const params = new URLSearchParams(location.search);
-  const inviteRoom = params.get("room");
-  if (inviteRoom) $("roomInput").value = inviteRoom;
-})();
-</script>
-</body>
-</html>
+ }catch(e){saySystem("Ошибка проверки ответа: "+e.message)}finally{processing=false}
+}
+function pickWord(){
+ const s=roomData?.settings||{}, custom=(s.customWords||[]).filter(Boolean);
+ if(custom.length)return custom[Math.floor(Math.random()*custom.length)];
+ let cats=s.category==="Все категории"?Object.keys(words):[s.category], pool=[];
+ for(const c of cats){const group=words[c];if(!group)continue;const diff=s.difficulty==="Любая"?Object.keys(group):[s.difficulty==="Лёгкая"?"easy":s.difficulty==="Средняя"?"medium":"hard"];for(const d of diff)pool.push(...(group[d]||[]))}
+ return pool[Math.floor(Math.random()*pool.length)]||"неожиданность";
+}
+async function startRound(leaderId=user.uid){
+ if(!isHost)return;
+ const word=pickWord(), nextRound=(roomData?.state?.round||0)+1;
+ secret=word;revealed=false;
+ await set(ref(db,`secrets/${room}`),{word,updatedAt:Date.now()});
+ await update(roomRef("state"),{started:true,leaderId,round:nextRound,winnerId:null,winnerName:null,startedAt:Date.now()});
+ if(roundTimer)clearTimeout(roundTimer);
+ const secs=Number(roomData?.settings?.timerSeconds||0);
+ if(secs>0)roundTimer=setTimeout(()=>{if(isHost&&roomData?.state?.started)skipRound("Время вышло!");},secs*1000);
+}
+async function skipRound(reason="Раунд пропущен."){
+ if(!isHost)return;
+ await update(roomRef("state"),{started:false,winnerId:null,winnerName:null});
+ await set(ref(db,`secrets/${room}`),{word:"",updatedAt:Date.now()});secret="";
+ saySystem(reason);
+}
+$("createBtn").onclick=()=>createRoom();$("joinBtn").onclick=()=>joinRoom();
+$("chatForm").onsubmit=e=>{e.preventDefault();sendChat($("chatInput").value).catch(err=>saySystem(err.message))};
+$("startBtn").onclick=()=>startRound().catch(e=>saySystem(e.message));
+$("revealBtn").onclick=()=>{revealed=true;$("secretArea").classList.remove("hidden");$("secretWord").textContent=secret;$("notLeader").classList.add("hidden")};
+$("skipBtn").onclick=()=>skipRound();
+$("saveSettings").onclick=async()=>{
+ const custom=$("customWords").value.split("\n").map(x=>x.trim()).filter(Boolean);
+ await update(roomRef("settings"),{category:$("category").value,difficulty:$("difficulty").value,timerSeconds:Math.max(0,Math.min(600,Number($("timerSeconds").value)||0)),customWords:custom});
+ saySystem("Настройки сохранены.");
+};
+$("leaveBtn").onclick=async()=>{try{if(room)await set(ref(db,`rooms/${room}/players/${user.uid}`),null)}catch{}location.href=location.pathname};
+init();
+</script></body></html>

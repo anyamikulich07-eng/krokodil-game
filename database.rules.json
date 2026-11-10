@@ -1,0 +1,26 @@
+{
+  "rules": {
+    "rooms": {
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.child('hostId').val() === auth.uid) || data.child('hostId').val() === auth.uid)",
+        "players": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($roomId).child('hostId').exists()"
+          }
+        },
+        "messages": {
+          "$messageId": {
+            ".write": "auth != null && root.child('rooms').child($roomId).child('players').child(auth.uid).exists() && newData.child('uid').val() === auth.uid"
+          }
+        }
+      }
+    },
+    "secrets": {
+      "$roomId": {
+        ".read": "auth != null && root.child('rooms').child($roomId).child('state').child('leaderId').val() === auth.uid",
+        ".write": "auth != null && root.child('rooms').child($roomId).child('hostId').val() === auth.uid"
+      }
+    }
+  }
+}
